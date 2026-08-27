@@ -1,2 +1,8 @@
 @import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+	/* Fallback bis die Settings geladen sind bzw. falls kein Wert gesetzt ist;
+	   entspricht dem bisherigen fest codierten Tailwind-Blau (blue-600). */
+	--accent: #2563eb;
+}

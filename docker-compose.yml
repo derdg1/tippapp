@@ -1,10 +1,23 @@
 services:
   pocketbase:
     build: ./pocketbase
+    environment:
+      PREDICTOR_URL: http://predictor:8000
     volumes:
       - pb_data:/pb/pb_data
     ports:
       - '8090:8090'
+    depends_on:
+      - predictor
+    restart: unless-stopped
+
+  predictor:
+    build: ./predictor
+    environment:
+      PB_URL: http://pocketbase:8090
+      MODEL_PATH: /app/models/model.joblib
+    volumes:
+      - predictor_data:/app/models
     restart: unless-stopped
 
   frontend:
@@ -19,3 +32,4 @@ services:
 
 volumes:
   pb_data:
+  predictor_data:
