@@ -147,3 +147,34 @@ docker compose up --build -d
 
 - PocketBase: `http://<host>:8090`
 - Frontend: `http://<host>:3000`
+
+## Deployment via Portainer (GitHub Container Registry)
+
+Ein GitHub-Actions-Workflow (`.github/workflows/docker-publish.yml`) baut bei
+jedem Push auf `main` automatisch alle drei Images und veröffentlicht sie im
+GitHub Container Registry:
+
+- `ghcr.io/derdg1/tippapp-pocketbase`
+- `ghcr.io/derdg1/tippapp-frontend`
+- `ghcr.io/derdg1/tippapp-predictor`
+
+`docker-compose.prod.yml` referenziert diese fertigen Images (statt lokal zu
+bauen wie `docker-compose.yml`) und eignet sich direkt als **Portainer-Stack**:
+
+1. **Einmalig:** GHCR-Pakete sichtbar machen. Neu veröffentlichte Packages sind
+   standardmäßig **privat**, unabhängig von der Repo-Sichtbarkeit. Entweder:
+   - GitHub → Profil → *Packages* → jedes der drei `tippapp-*`-Pakete öffnen →
+     *Package settings* → *Change visibility* → *Public* (einfachster Weg für
+     eine private Hobby-App ohne sensible Daten in den Images), **oder**
+   - in Portainer unter *Registries* eine GHCR-Registry mit einem GitHub
+     [Personal Access Token](https://github.com/settings/tokens) (Scope
+     `read:packages`) hinterlegen, falls die Pakete privat bleiben sollen.
+2. In Portainer: *Stacks* → *Add stack* → Inhalt von `docker-compose.prod.yml`
+   einfügen (oder als *Repository*-Stack direkt auf diese Datei im Repo
+   zeigen).
+3. Umgebungsvariable `PUBLIC_PB_URL` setzen — wie beim lokalen Docker-Deployment
+   muss sie vom **Browser** aus erreichbar sein (Host-IP/Domain, kein
+   Docker-interner Name). `IMAGE_TAG` kann optional auf einen bestimmten
+   Commit-SHA-Tag statt `latest` gepinnt werden.
+4. Stack deployen — PocketBase, Predictor und Frontend starten mit denselben
+   Volumes/Ports wie beim lokalen `docker compose up`.
