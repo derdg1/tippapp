@@ -1,0 +1,21 @@
+services:
+  pocketbase:
+    build: ./pocketbase
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      - '8090:8090'
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      PUBLIC_PB_URL: ${PUBLIC_PB_URL:-http://localhost:8090}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - pocketbase
+    restart: unless-stopped
+
+volumes:
+  pb_data:
