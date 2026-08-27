@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { getCurrentMatchday, listMatches } from '$lib/api/matches';
 	import { listTipps, upsertTipp } from '$lib/api/tipps';
+	import { getPrediction } from '$lib/api/predict';
 	import type { MatchRecord, TippRecord } from '$lib/types';
 
 	let season = $state(new Date().getFullYear());
@@ -11,6 +12,9 @@
 	let predictions = $state<Record<string, { home: number; away: number }>>({});
 	let loading = $state(true);
 	let saving = $state<Record<string, boolean>>({});
+	let suggestions = $state<Record<string, { home: number; away: number } | null>>({});
+	let suggestLoading = $state<Record<string, boolean>>({});
+	let suggestError = $state<Record<string, string>>({});
 
 	async function loadDefault() {
 		try {
@@ -42,6 +46,27 @@
 		const tipp = await upsertTipp(matchId, pred.home, pred.away);
 		tippsByMatch = { ...tippsByMatch, [matchId]: tipp };
 		saving = { ...saving, [matchId]: false };
+	}
+
+	async function loadSuggestion(matchId: string) {
+		suggestLoading = { ...suggestLoading, [matchId]: true };
+		suggestError = { ...suggestError, [matchId]: '' };
+		try {
+			const res = await getPrediction(matchId);
+			suggestions = {
+				...suggestions,
+				[matchId]: { home: res.predicted_home, away: res.predicted_away }
+			};
+		} catch (e) {
+			suggestError = { ...suggestError, [matchId]: 'Vorschlag nicht verfügbar' };
+		} finally {
+			suggestLoading = { ...suggestLoading, [matchId]: false };
+		}
+	}
+
+	function applySuggestion(matchId: string) {
+		const s = suggestions[matchId];
+		if (s) predictions = { ...predictions, [matchId]: { home: s.home, away: s.away } };
 	}
 
 	onMount(async () => {
@@ -108,7 +133,7 @@
 						<button
 							onclick={() => save(match.id)}
 							disabled={saving[match.id]}
-							class="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+							class="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 						>
 							Speichern
 						</button>
@@ -119,6 +144,31 @@
 						Ergebnis: {match.home_score} : {match.away_score}
 						{#if pointsLabel(match)}
 							&middot; {pointsLabel(match)}
+						{/if}
+					</div>
+				{:else}
+					<div class="mt-2 flex items-center gap-2 text-sm">
+						{#if suggestions[match.id]}
+							<span class="text-gray-600 dark:text-gray-400">
+								Tipp-Vorschlag: {suggestions[match.id]?.home}:{suggestions[match.id]?.away}
+							</span>
+							<button
+								onclick={() => applySuggestion(match.id)}
+								class="text-[var(--accent)] underline"
+							>
+								Übernehmen
+							</button>
+						{:else}
+							<button
+								onclick={() => loadSuggestion(match.id)}
+								disabled={suggestLoading[match.id]}
+								class="text-[var(--accent)] underline disabled:opacity-50"
+							>
+								{suggestLoading[match.id] ? 'Lade Vorschlag...' : 'Vorschlag laden'}
+							</button>
+						{/if}
+						{#if suggestError[match.id]}
+							<span class="text-gray-500">{suggestError[match.id]}</span>
 						{/if}
 					</div>
 				{/if}

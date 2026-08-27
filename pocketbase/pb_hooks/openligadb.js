@@ -11,7 +11,16 @@ const LEAGUE = "bl1"; // Bundesliga-Kürzel, für spätere bl2-Erweiterung als K
 const BASE_URL = "https://api.openligadb.de";
 
 function fetchJson(url) {
-	const res = $http.send({ method: "GET", url });
+	const headers = {};
+	try {
+		const settings = $app.findFirstRecordByFilter("settings", "", {});
+		const key = settings.get("openligadb_api_key");
+		if (key) headers["Authorization"] = `Bearer ${key}`;
+	} catch (e) {
+		// kein Settings-Record vorhanden -> ohne Auth-Header weitermachen
+	}
+
+	const res = $http.send({ method: "GET", url, headers });
 	if (res.statusCode >= 400) {
 		throw new Error(`OpenLigaDB request failed (${res.statusCode}): ${url}`);
 	}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { listSeasonTipps } from '$lib/api/tipps';
+	import { getSettings } from '$lib/api/settings';
 	import type { TippRecord } from '$lib/types';
 	import jsPDF from 'jspdf';
 	import autoTable from 'jspdf-autotable';
@@ -9,6 +10,7 @@
 	let tipps = $state<TippRecord[]>([]);
 	let loading = $state(true);
 	let scopeMatchday = $state<number | ''>('');
+	let appName = $state('TippKick');
 
 	async function load() {
 		loading = true;
@@ -17,6 +19,14 @@
 	}
 
 	onMount(load);
+	onMount(async () => {
+		try {
+			const settings = await getSettings();
+			if (settings.app_name) appName = settings.app_name;
+		} catch (e) {
+			// Fallback "TippKick" bleibt bestehen
+		}
+	});
 
 	const totalPoints = $derived(tipps.reduce((sum, t) => sum + (t.points ?? 0), 0));
 
@@ -40,8 +50,8 @@
 		const doc = new jsPDF();
 		const title =
 			scopeMatchday === ''
-				? `TippKick – Saison ${season}`
-				: `TippKick – Spieltag ${scopeMatchday} (Saison ${season})`;
+				? `${appName} – Saison ${season}`
+				: `${appName} – Spieltag ${scopeMatchday} (Saison ${season})`;
 		doc.text(title, 14, 16);
 
 		autoTable(doc, {
@@ -61,10 +71,11 @@
 			})
 		});
 
+		const slug = appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tippkick';
 		const filename =
 			scopeMatchday === ''
-				? `tippkick-saison-${season}.pdf`
-				: `tippkick-spieltag-${scopeMatchday}.pdf`;
+				? `${slug}-saison-${season}.pdf`
+				: `${slug}-spieltag-${scopeMatchday}.pdf`;
 		doc.save(filename);
 	}
 </script>
@@ -118,7 +129,7 @@
 		</label>
 		<button
 			onclick={exportPdf}
-			class="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+			class="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-white hover:opacity-90"
 		>
 			Als PDF exportieren
 		</button>
