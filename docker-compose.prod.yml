@@ -1,0 +1,35 @@
+services:
+  pocketbase:
+    image: ghcr.io/derdg1/tippapp-pocketbase:${IMAGE_TAG:-latest}
+    environment:
+      PREDICTOR_URL: http://predictor:8000
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      - '8090:8090'
+    depends_on:
+      - predictor
+    restart: unless-stopped
+
+  predictor:
+    image: ghcr.io/derdg1/tippapp-predictor:${IMAGE_TAG:-latest}
+    environment:
+      PB_URL: http://pocketbase:8090
+      MODEL_PATH: /app/models/model.joblib
+    volumes:
+      - predictor_data:/app/models
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/derdg1/tippapp-frontend:${IMAGE_TAG:-latest}
+    environment:
+      PUBLIC_PB_URL: ${PUBLIC_PB_URL:-http://localhost:8090}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - pocketbase
+    restart: unless-stopped
+
+volumes:
+  pb_data:
+  predictor_data:
